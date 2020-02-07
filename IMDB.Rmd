@@ -1,0 +1,345 @@
+---
+title: "Assignment 1"
+author: "Mohamed Megahed"
+date: "February 2, 2020"
+course: "Advanced Machine Learning"
+---
+
+```{r}
+library(ggplot2)
+library(tidyverse)
+library(cowplot)
+library(keras)
+# Importing IMDB movie reviews dataset and we only keep the top 10,000 most frequently occurring words in the training data.
+imdb <- dataset_imdb(num_words = 10000)
+c(c(train_data, train_labels), c(test_data, test_labels)) %<-% imdb
+```
+
+## Preparing the data
+```{r}
+# Converting data to binary data
+vectorize_sequences <- function(sequences, dimention = 10000) { 
+    # Create an all-zero matrix of shape (len(sequences), dimension)
+  results <- matrix(0, nrow = length(sequences), ncol= dimention)
+  for(i in 1:length(sequences))
+        # Sets specific indices of results[i] to 1s
+  results[i, sequences[[i]]] <- 1
+  results
+}
+
+x_train <- vectorize_sequences(train_data)  # vectorized training data
+x_test <- vectorize_sequences(test_data)    # vectorized test data
+# vectorizing the labels
+y_train <- as.numeric(train_labels)
+y_test <- as.numeric(test_labels)
+# structure of the vectorized samples
+str(x_train[1,])
+
+# Validating our approach
+## Setting apart 50 % random sample from the original training data for validation data
+sample_size = floor(0.5*nrow(x_train))
+set.seed(777)
+Train_indices = sample(seq_len(nrow(x_train)),size = sample_size)
+partial_x_train =x_train[Train_indices,]
+x_val =x_train[-Train_indices,]
+
+partial_y_train <- y_train[Train_indices]
+y_val <- y_train[-Train_indices]
+```
+### The Original Model
+```{r}
+model1 <- keras_model_sequential() %>% 
+  layer_dense(units = 16, activation = "relu", input_shape = c(10000)) %>% 
+  layer_dense(units = 16, activation = "relu") %>% 
+  layer_dense(units = 1, activation = "sigmoid")
+model1 %>% compile(
+  optimizer = "rmsprop",
+  loss = "binary_crossentropy",
+  metrics = c("accuracy"))
+history <- model1 %>% fit(
+  partial_x_train,
+  partial_y_train,
+  epochs = 20,
+  batch_size = 512,
+  validation_data = list(x_val, y_val))
+```
+
+*** 1.	Try using one or three hidden layers, and see how doing so affects validation and test accuracy.
+###  First: Three Hidden Layers
+*** 32 ,32, 32 Units
+```{r}
+# Building our network 
+# Using 3 hidden layers with 32, 32, 32 units, tanh activation function, batch size 512, 20 epoch.
+model333 <- keras_model_sequential() %>% 
+  layer_dense(units = 32, activation = "tanh", input_shape = c(10000)) %>%
+  layer_dense(units = 32, activation = "tanh") %>%
+  layer_dense(units = 32, activation = "tanh") %>%
+  layer_dense(units = 1, activation = "sigmoid")
+model333 %>% compile(
+  optimizer = "rmsprop",
+  loss = "mse",
+  metrics = c("accuracy"))
+history_3_layer32 <- model333 %>% fit(
+  partial_x_train,
+  partial_y_train,
+  epochs = 20,
+  batch_size = 512,
+  validation_data = list(x_val, y_val))
+
+```
+
+```{r fig.height=7, fig.width=11}
+# Visualizing the model331 output of loss function and accuracy
+model331.df <- as.data.frame(history_3_layer32$metrics)
+names(model331.df) <- c("train_loss","train_accuracy","val_loss","val_accuracy")
+model331.df <- model331.df %>% mutate(epochs=1:n()) %>% gather("split","values",-epochs) %>% separate(split,c("split","metric")) %>% spread(metric,values)
+p1<-ggplot(model331.df) + geom_line(aes(x=epochs,y=loss,color=split),size=0.8)+geom_point(aes(x=epochs,y=loss,color=factor(split)),size=1.5)+ggtitle("Epochs vs Loss function  with 3 hidden layers(32,32,32)")+theme(panel.grid = element_blank(),panel.background = element_blank())+theme_classic()+theme(legend.position = 'top',legend.justification = 'left',legend.title = element_blank())
+p2<-ggplot(model331.df) + geom_line(aes(x=epochs,y=accuracy,color=split),size=0.8,show.legend = F)+geom_point(aes(x=epochs,y=accuracy,color=split),size=1.5,show.legend = F)+ggtitle("Epochs vs Accuracy")+theme(panel.grid = element_blank(),panel.background = element_blank())+theme_classic()
+plot_grid(p1,p2,nrow = 2)
+```
+
+```{r}
+# Let's train a new network from scratch for 3 epochs and then evaluate it on the test data.
+model3332 <- keras_model_sequential() %>% 
+  layer_dense(units = 32, activation = "tanh", input_shape = c(10000)) %>%
+  layer_dense(units = 32, activation = "tanh") %>%
+  layer_dense(units = 32, activation = "tanh") %>%
+  layer_dense(units = 1, activation = "sigmoid")
+
+model3332 %>% compile(
+  optimizer = "rmsprop",
+  loss = "mse",
+  metrics = c("accuracy"))
+
+model3332 %>% fit(x_train, y_train, epochs = 3, batch_size = 512)
+results1 <- model3332 %>% evaluate(x_test, y_test)
+results1
+```
+
+*** 64, 64, 64 
+```{r}
+# Building our network 
+# Using 3 hidden layers with 64 units, tanh activation function, batch size 512, 20 epoch.
+model66611 <- keras_model_sequential() %>% 
+  layer_dense(units = 64, activation = "tanh", input_shape = c(10000)) %>%
+  layer_dense(units = 64, activation = "tanh") %>%
+  layer_dense(units = 64, activation = "tanh") %>%
+  layer_dense(units = 1, activation = "sigmoid")
+model66611 %>% compile(
+  optimizer = "rmsprop",
+  loss = "mse",
+  metrics = c("accuracy"))
+history_3_layer64 <- model66611 %>% fit(
+  partial_x_train,
+  partial_y_train,
+  epochs = 20,
+  batch_size = 512,
+  validation_data = list(x_val, y_val))
+```
+
+```{r fig.height=7, fig.width=11}
+# Visualizing the model666 output of loss function and accuracy
+model666.df <- as.data.frame(history_3_layer64$metrics)
+names(model666.df) <- c("train_loss","train_accuracy","val_loss","val_accuracy")
+model666.df <- model666.df %>% mutate(epochs=1:n()) %>% gather("split","values",-epochs) %>% separate(split,c("split","metric")) %>% spread(metric,values)
+p1<-ggplot(model666.df) + geom_line(aes(x=epochs,y=loss,color=split),size=0.8)+geom_point(aes(x=epochs,y=loss,color=factor(split)),size=1.5)+ggtitle("Epochs vs Loss function  with 3 hidden layers(64,64,64)")+theme(panel.grid = element_blank(),panel.background = element_blank())+theme_classic()+theme(legend.position = 'top',legend.justification = 'left',legend.title = element_blank())
+p2<-ggplot(model666.df) + geom_line(aes(x=epochs,y=accuracy,color=split),size=0.8,show.legend = F)+geom_point(aes(x=epochs,y=accuracy,color=split),size=1.5,show.legend = F)+ggtitle("Epochs vs Accuracy")+theme(panel.grid = element_blank(),panel.background = element_blank())+theme_classic()
+plot_grid(p1,p2,nrow = 2)
+```
+
+```{r}
+# Let's train a new network from scratch for 2 epochs and then evaluate it on the test data.
+model6665 <- keras_model_sequential() %>% 
+  layer_dense(units = 64, activation = "tanh", input_shape = c(10000)) %>%
+    layer_dropout(rate = 0.5) %>%
+
+  layer_dense(units = 64, activation = "tanh") %>%
+    layer_dropout(rate = 0.5) %>%
+
+  layer_dense(units = 64, activation = "tanh") %>%
+    layer_dropout(rate = 0.5) %>%
+
+  layer_dense(units = 1, activation = "sigmoid")
+model6665 %>% compile(
+  optimizer = "rmsprop",
+  loss = "mse",
+  metrics = c("accuracy"))
+model6665 %>% fit(x_train, y_train, epochs = 2, batch_size = 512)
+results2 <- model6665 %>% evaluate(x_test, y_test)
+results2
+```
+*** Using the dropout improves the validation accuracy from 84.1 % to 87.1 %
+
+
+*** Having more hidden units (a higher-dimensional representation space) allows the network to learn more complex representations, but it makes the network more computationally expensive and may lead to learning unwanted patterns (patterns that will improve performance on the training data but not on the test data).
+
+###  Second: One Hidden Layer
+*** 64 Units
+```{r, echo=TRUE, results='hide'}
+# Using 1 hidden layer with 64 units, tanh activation function, batch size 512, 20 epoch.
+model64 <- keras_model_sequential() %>% 
+  layer_dense(units = 64, activation = "tanh", input_shape = c(10000)) %>%
+  layer_dense(units = 1, activation = "sigmoid")
+model64 %>% compile(
+  optimizer = "rmsprop",
+  loss = "mse",
+  metrics = c("accuracy"))
+history_64 <- model64 %>% fit(
+  partial_x_train,
+  partial_y_train,
+  epochs = 20,
+  batch_size = 512,
+  validation_data = list(x_val, y_val))
+```
+
+```{r fig.height=7, fig.width=11}
+# Visualizing the model666 output of loss function and accuracy
+model64.df <- as.data.frame(history_64$metrics)
+names(model64.df) <- c("train_loss","train_accuracy","val_loss","val_accuracy")
+model64.df <- model64.df %>% mutate(epochs=1:n()) %>% gather("split","values",-epochs) %>% separate(split,c("split","metric")) %>% spread(metric,values)
+p1<-ggplot(model64.df) + geom_line(aes(x=epochs,y=loss,color=split),size=0.8)+geom_point(aes(x=epochs,y=loss,color=factor(split)),size=1.5)+ggtitle("Epochs vs Loss function  with 1 hidden layers(64)")+theme(panel.grid = element_blank(),panel.background = element_blank())+theme_classic()+theme(legend.position = 'top',legend.justification = 'left',legend.title = element_blank())
+p2<-ggplot(model64.df) + geom_line(aes(x=epochs,y=accuracy,color=split),size=0.8,show.legend = F)+geom_point(aes(x=epochs,y=accuracy,color=split),size=1.5,show.legend = F)+ggtitle("Epochs vs Accuracy")+theme(panel.grid = element_blank(),panel.background = element_blank())+theme_classic()
+plot_grid(p1,p2,nrow = 2)
+```
+
+
+```{r}
+# Let's train a new network from scratch for 3 epochs and then evaluate it on the test data.
+model641 <- keras_model_sequential() %>% 
+  layer_dense(units = 64, activation = "tanh", input_shape = c(10000)) %>%
+  layer_dense(units = 1, activation = "sigmoid")
+model641 %>% compile(
+  optimizer = "rmsprop",
+  loss = "mse",
+  metrics = c("accuracy"))
+model641 %>% fit(x_train, y_train, epochs = 3, batch_size = 512)
+results3 <- model641 %>% evaluate(x_test, y_test)
+results3
+```
+
+
+## Now we can use the dropout to a 3 layer model and 1 layer model
+*** Three Layer 64, 32, 16 Units with dropout
+```{r, echo=TRUE, results='hide'}
+# Using 3 hidden layers with 64, 32, 16 units, tanh activation function, batch size 512, 20 epoch.
+set.seed(123)
+model6000 <- keras_model_sequential() %>% 
+  layer_dense(units = 64, activation = "tanh",input_shape = c(10000)) %>%
+    layer_dropout(rate = 0.5) %>%
+  layer_dense(units = 32, activation = "tanh") %>%
+    layer_dropout(rate = 0.5) %>%
+  layer_dense(units = 16, activation = "tanh") %>%
+    layer_dropout(rate = 0.5) %>%
+  layer_dense(units = 1, activation = "sigmoid")
+model6000 %>% compile(
+  optimizer = "rmsprop",
+  loss = "mse",
+  metrics = c("accuracy"))
+history_3 <- model6000 %>% fit(
+  partial_x_train,
+  partial_y_train,
+  epochs = 20,
+  batch_size = 512,
+  validation_data = list(x_val, y_val))
+```
+
+```{r fig.height=7, fig.width=11}
+# Visualizing the model666 output of loss function and accuracy
+model630.df <- as.data.frame(history_3$metrics)
+names(model630.df) <- c("train_loss","train_accuracy","val_loss","val_accuracy")
+model630.df <- model630.df %>% mutate(epochs=1:n()) %>% gather("split","values",-epochs) %>% separate(split,c("split","metric")) %>% spread(metric,values)
+p1<-ggplot(model630.df) + geom_line(aes(x=epochs,y=loss,color=split),size=0.8)+geom_point(aes(x=epochs,y=loss,color=factor(split)),size=1.5)+ggtitle("Epochs vs Loss function  with 3 hidden layers(64,32,16)")+theme(panel.grid = element_blank(),panel.background = element_blank())+theme_classic()+theme(legend.position = 'top',legend.justification = 'left',legend.title = element_blank())
+p2<-ggplot(model630.df) + geom_line(aes(x=epochs,y=accuracy,color=split),size=0.8,show.legend = F)+geom_point(aes(x=epochs,y=accuracy,color=split),size=1.5,show.legend = F)+ggtitle("Epochs vs Accuracy")+theme(panel.grid = element_blank(),panel.background = element_blank())+theme_classic()
+plot_grid(p1,p2,nrow = 2)
+```
+
+```{r}
+# Let's train a new network from scratch for 3 epochs and then evaluate it on the test data.
+model6315 <- keras_model_sequential() %>% 
+  layer_dense(units = 64, activation = "tanh",input_shape = c(10000)) %>%
+      layer_dropout(rate = 0.5) %>%
+  layer_dense(units = 32, activation = "tanh") %>%
+      layer_dropout(rate = 0.5) %>%
+  layer_dense(units = 16, activation = "tanh") %>%
+      layer_dropout(rate = 0.5) %>%
+  layer_dense(units = 1, activation = "sigmoid")
+model6315 %>% compile(
+  optimizer = "rmsprop",
+  loss = "mse",
+  metrics = c("accuracy"))
+model6315 %>% fit(x_train, y_train, epochs = 3, batch_size = 512)
+results4 <- model6315 %>% evaluate(x_test, y_test)
+results4
+```
+
+
+** One Layer 32 Units
+```{r}
+# Building our network 
+# Using 1 hidden layer with 32 units, tanh activation function, batch size 512, 20 epoch.
+model32 <- keras_model_sequential() %>% 
+  layer_dense(units = 32, activation = "tanh", input_shape = c(10000)) %>%
+  layer_dense(units = 1, activation = "sigmoid")
+model32 %>% compile(
+  optimizer = "rmsprop",
+  loss = "mse",
+  metrics = c("accuracy"))
+history_32 <- model32 %>% fit(
+  partial_x_train,
+  partial_y_train,
+  epochs = 20,
+  batch_size = 512,
+  validation_data = list(x_val, y_val))
+```
+
+```{r fig.height=7, fig.width=11}
+# Visualizing the model32 output of loss function and accuracy
+model32.df <- as.data.frame(history_32$metrics)
+names(model32.df) <- c("train_loss","train_accuracy","val_loss","val_accuracy")
+model32.df <- model32.df %>% mutate(epochs=1:n()) %>% gather("split","values",-epochs) %>% separate(split,c("split","metric")) %>% spread(metric,values)
+p1<-ggplot(model32.df) + geom_line(aes(x=epochs,y=loss,color=split),size=0.8)+geom_point(aes(x=epochs,y=loss,color=factor(split)),size=1.5)+ggtitle("Epochs vs Loss function  with 1 hidden layer(32), using dropout")+theme(panel.grid = element_blank(),panel.background = element_blank())+theme_classic()+theme(legend.position = 'top',legend.justification = 'left',legend.title = element_blank())
+p2<-ggplot(model32.df) + geom_line(aes(x=epochs,y=accuracy,color=split),size=0.8,show.legend = F)+geom_point(aes(x=epochs,y=accuracy,color=split),size=1.5,show.legend = F)+ggtitle("Epochs vs Accuracy")+theme(panel.grid = element_blank(),panel.background = element_blank())+theme_classic()
+plot_grid(p1,p2,nrow = 2)
+```
+
+```{r}
+# Let's train a new network from scratch for 3 epochs and then evaluate it on the test data.
+model321 <- keras_model_sequential() %>% 
+  layer_dense(units = 32, activation = "tanh", input_shape = c(10000)) %>%
+  layer_dense(units = 1, activation = "sigmoid")
+model321 %>% compile(
+  optimizer = "rmsprop",
+  loss = "mse",
+  metrics = c("accuracy"))
+model321 %>% fit(x_train, y_train, epochs = 3, batch_size = 512)
+results5 <- model321 %>% evaluate(x_test, y_test)
+results5
+```
+
+
+*** To compare the accuraces we'll write an R function that takes a named list of accuracy series and plots it:
+
+```{r}
+library(ggplot2)
+library(tidyr)
+plot_validation_accuracy <- function(accuracy) {
+  model_names <- names(accuracy)
+  accuracy <- as.data.frame(accuracy)
+  accuracy$epoch <- seq_len(nrow(accuracy))
+  accuracy %>% 
+    gather(model, accuracy, model_names[[1]], model_names[[2]], model_names[[3]], model_names[[4]],model_names[[5]],model_names[[6]]) %>% 
+    ggplot(aes(x = epoch, y = accuracy, colour = model)) +
+    geom_point() + geom_line() + ggtitle("Validation accuracy for different models")}
+```
+
+Here's a comparison of the validation accuraces of the original network and the other networks:
+
+```{r, fig.height=7, fig.width=13}
+plot_validation_accuracy(accuracy = list(
+  Original_Model = history$metrics$val_accuracy,
+  layers32_32_32 = history_3_layer32$metrics$val_accuracy,
+  layer_64 = history_64$metrics$val_accuracy,
+  layers64_64_64 = history_3_layer64$metrics$val_accuracy,
+  layer_32 = history_32$metrics$val_accuracy,
+  layers64_32_16 = history_3$metrics$val_accuracy))
+```
